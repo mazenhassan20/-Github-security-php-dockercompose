@@ -1,0 +1,62 @@
+version: '3.8'
+
+# ==========================================
+# (Networks)
+# ==========================================
+networks:
+  public_net:
+  private_net:
+
+# ==========================================
+#(Volumes)
+# ==========================================
+volumes:
+  wordpress_data:
+  db_data:
+
+# ==========================================
+# (Services)
+# ==========================================
+services:
+
+  #(MySQL)
+  db:
+    image: mysql:8.0
+    container_name: mysql_dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - private_net
+    volumes:
+      - db_data:/var/lib/mysql
+
+  #(PHP-FPM)
+  php:
+    image: wordpress:fpm-alpine
+    container_name: wordpress_app_dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - private_net
+    volumes:
+      - wordpress_data:/var/www/html
+    depends_on:
+      - db
+
+  # (Nginx Proxy)
+  proxy:
+    image: nginx
+    container_name: nginx_proxy_dev
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    networks:
+      - public_net
+      - private_net
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf
+      - wordpress_data:/var/www/html
+    depends_on:
+      - php
